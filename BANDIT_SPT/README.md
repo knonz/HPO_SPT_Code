@@ -3,11 +3,12 @@
 
 ## Dependencies
 This code requires the following:
-python 3.*
-pytorch+cuda
-gym
-matplotlib
-numpy
+
+- python 3.*
+- pytorch+cuda
+- gym
+- matplotlib
+- numpy
 ## Usage
 For example
 ```
