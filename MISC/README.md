@@ -3,10 +3,11 @@
 
 ## Dependencies
 This code requires the following:
-python 3.*
-matplotlib
-numpy
-python-ternary
+
+- python 3.*
+- matplotlib
+- numpy
+- python-ternary
 <!-- ## Installation
 
 ```
