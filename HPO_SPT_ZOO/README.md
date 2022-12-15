@@ -51,6 +51,17 @@ yields a tracked experiment at the wandb website.
 You can easily overwrite hyperparameters in the command line, using --hyperparams:
 see HPO example
 
+#### Hyperparameters of HPO + SPT
+ - advantage_flipped_rate: flip rate of estimated advantage
+ - rgamma: threshold of SPT
+ - policy_update_scheme: scheme for actor delay and one action per state (Assumption: In each episode t, the state-action pairs in D(t) have distinct states)
+ , the scheme will make the results have high variance. Only scheme 1 is used recently. 
+ Maybe we should change the scheme to consider the loss of all actions of the state-action pairs in D(t).
+ - actor_delay: actor delay must be larger than action space of the env in shceme 1. if actor_delay>action space of the env, 
+ episode ((actor_delay-action space)~(actor_delay-1))+n*actor_delay will not update the policy.
+ - independent_value_net: use another NN to estimate the Q value.
+ - alpha:epsilon of PPO-Clip, margin of HPO
+ - policy_kwargs: we can specify the optimizer or initialization of policy.
 
 ### Enjoy a Trained Agent
 For example
