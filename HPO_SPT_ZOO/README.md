@@ -74,3 +74,5 @@ python enjoy.py --algo hpo --env CartPole-v1 -f logs/ --exp-id 147 --stochastic
 
 ### Add a new argument to RL Baselines3 Zoo
 Please see [this](https://hackmd.io/@_BK2lUeVSI6hlsvNLM-iLQ/SJgLZGd9u).
+
+### Don't use the results of the eval, because they are generated with deterministic, which is hard to be affected by noisy critics. Use the results of the rollout/ep_rew_mean, which is sampled according to the distribution.
