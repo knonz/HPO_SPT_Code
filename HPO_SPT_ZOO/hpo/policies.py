@@ -300,6 +300,7 @@ class ActorCriticPolicy2(BasePolicy):
         # q-value version (vf + a)
         #self.q_value_net = nn.Linear(self.mlp_extractor.latent_dim_vf + 1, 1)
         #self.value_net = nn.Linear(self.mlp_extractor.latent_dim_vf, latent_dim_pi)
+        '''Note: Our value_net has action_space.n outputs, which estimates the Q value'''
         self.value_net = nn.Linear(self.mlp_extractor.latent_dim_vf, self.action_space.n)
         #self.value_net = nn.Linear(self.mlp_extractor.latent_dim_vf, 4)
         # Init weights: use orthogonal initialization
@@ -328,6 +329,10 @@ class ActorCriticPolicy2(BasePolicy):
         :param obs: Observation
         :param deterministic: Whether to sample or use deterministic actions
         :return: action, value and log probability of the action
+        OUTPUT
+        :values: with action space dimension
+        :log_prob: only the prob of the chosen action
+        :actions: get actions from policy (if deterministic == True, get_action will return action with the largest prob)
         """
         # print("forward obs:",obs)
         latent_pi, latent_vf, latent_sde = self._get_latent(obs)
@@ -410,6 +415,11 @@ class ActorCriticPolicy2(BasePolicy):
         :param actions:
         :return: estimated value, log likelihood of taking those actions
             and entropy of the action distribution.
+
+        OUTPUT
+        :values: with action space dimension (All Q(s,a) of given state s)
+        :log_prob: only the prob of the chosen action
+        :entropy: the entropy of the distribution of the state s
         """
         # print("evaluate_actions obs",obs)
         latent_pi, latent_vf, latent_sde = self._get_latent(obs)

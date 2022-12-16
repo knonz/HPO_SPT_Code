@@ -339,7 +339,7 @@ class HPO(OnPolicyAlgorithm):
                 # Convert to pytorch tensor or to TensorDict
                 # new_obs_tensor = obs_as_tensor(new_obs, self.device)
                 new_obs_tensor = obs_as_tensor(self._last_obs, self.device)
-                '''Compute V'''
+                '''Compute V_s = E_a~pi [Q_s_a] '''
                 for a in range(self.action_space.n):
                     batch_actions = np.full(batch_actions.shape, a)
                     #print(batch_actions)
@@ -389,7 +389,7 @@ class HPO(OnPolicyAlgorithm):
         values = th.Tensor(np.zeros_like(actions.reshape(-1), dtype=float)).to(self.device)
         batch_actions = np.zeros_like(actions.reshape(-1))
         with th.no_grad():
-                # Compute value for the last timestep
+            '''# Compute value for the last timestep'''
             obs_tensor = obs_as_tensor(new_obs, self.device)
             #_, values, _ = self.policy.forward(obs_tensor)
             for a in range(self.action_space.n):
@@ -462,6 +462,7 @@ class HPO(OnPolicyAlgorithm):
         # print("train self.ep_info_buffer",self.ep_info_buffer)
         # Update optimizer learning rate
         '''using a target policy to compute the ratio of prob which is not in D(t)'''
+        '''D(t) only saves old pi(s,a) which is interacted with env'''
         self.target_policy = copy.deepcopy(self.policy) 
         self._update_learning_rate(self.policy.optimizer)
         # Compute current clip range
@@ -512,13 +513,14 @@ class HPO(OnPolicyAlgorithm):
         '''Swapping the rollout_buffer.get and epoch for loop to make the implements in HPO paper, 
         and it is easier to implement the flipping of the sign of advantage'''
         for rollout_data in self.rollout_buffer.get(self.batch_size):
+            '''# Do a complete pass on the rollout buffer'''
             rollbutffer_get_counter += 1
             for _ in range(self.action_space.n):
                 flipped_adv = ( th.ones(self.batch_size)-2* th.bernoulli( self.advantage_flipped_rate *th.ones(self.batch_size) ) ).to(self.device)  #1 ,-1
                 flipped_adv_list.append(flipped_adv)
             for epoch in range(self.n_epochs):
                 approx_kl_divs = []
-                # Do a complete pass on the rollout buffer
+                
                 # Hard update for target policy - 9
                 #polyak_update(self.policy.parameters(), self.target_policy.parameters(), 1.0)
                 # print("len(rollout_data): ",len(rollout_data))
@@ -579,6 +581,11 @@ class HPO(OnPolicyAlgorithm):
                 gpu_action_probs = [] # action first then batch idx
                 full_sa_log_prob = []
                 target_full_sa_log_prob = []
+                '''evaluate_actions return 
+                q_values: with all action of the given states
+                a_log_prob: only the log prob of the given action
+                To get a_log_prob of other actions, we need to run evaluate_actions self.action_space.n times to get all log_prob.
+                '''
                 for a in range(self.action_space.n):
                     # print("action", a, batch_actions)
                     batch_actions = np.full(batch_actions.shape,a)
@@ -692,7 +699,7 @@ class HPO(OnPolicyAlgorithm):
                 make the influence of the incorrect advantage will not be soothed by other actions in the same state'''
                 '''episode_counter % self.actor_delay to make the policy update slower than the critic update'''
                 '''self.policy_update_scheme == 1 block actor delay must be larger than action_space.n, 
-                or some action will not be updated foraever'''
+                or some action will not be updated forever'''
                 if episode_counter % self.actor_delay == 0 and self.policy_update_scheme == 0:
                     # if if episode_counter % self.actor_delay < self.action_space.n :
                     # a  =  int((episode_counter ) % self.actor_delay )
@@ -786,6 +793,7 @@ class HPO(OnPolicyAlgorithm):
                     policy_loss = th.stack(policy_losses2).sum() / not_0_loss_counter
                 
                 if self.policy_update_scheme == 1 and (episode_counter % self.actor_delay) < self.action_space.n:
+                    '''only update one action in a episode'''
                     a  =  int((episode_counter ) % self.actor_delay )
                     # for a in range(self.action_space.n) :
                     # a =  int((episode_counter/self.actor_delay) %  self.action_space.n )
@@ -1013,7 +1021,8 @@ class HPO(OnPolicyAlgorithm):
                 # entropy = None
                 # Entropy loss favor exploration
                 '''other people did not allow me to add entropy term in HPO loss,
-                 but I think this is one of the techniques that make PPO-clip succeed'''
+                 but I think this is one of the techniques that make PPO-clip succeed? 
+                 If you want to use entropy, remember to add --entropy_hpo in the argument'''
                 if entropy is None:
                     # Approximate entropy when no analytical form
                     entropy_loss = -th.mean(-val_log_prob)
