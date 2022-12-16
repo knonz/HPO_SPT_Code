@@ -71,3 +71,6 @@ python enjoy.py --algo algo_name --env env_id
 ```
 python enjoy.py --algo hpo --env CartPole-v1 -f logs/ --exp-id 147 --stochastic
 ```
+
+### Add a new argument to RL Baselines3 Zoo
+Please see [this](https://hackmd.io/@_BK2lUeVSI6hlsvNLM-iLQ/SJgLZGd9u).
