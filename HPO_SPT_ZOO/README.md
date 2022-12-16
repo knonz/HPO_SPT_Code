@@ -47,9 +47,17 @@ The following command
 python train.py --algo ppo --env CartPole-v1 --track --wandb-project-name sb3
 ```
 yields a tracked experiment at the wandb website.
+
+#### Arguments
+ - classifier: classifiers of HPO (please choose AM)
+ - aece: adaptive margin (epsilon of PPO-clip) (please choose CE)
+ - seed: random seed
+ - entropy_hpo: If you want to use entropy in HPO, remember to add --entropy_hpo in the argument
+
 #### Overwrite hyperparameters
 You can easily overwrite hyperparameters in the command line, using --hyperparams:
 see HPO example
+
 
 #### Hyperparameters of HPO + SPT
  - advantage_flipped_rate: flip rate of estimated advantage
@@ -75,4 +83,4 @@ python enjoy.py --algo hpo --env CartPole-v1 -f logs/ --exp-id 147 --stochastic
 ### Add a new argument to RL Baselines3 Zoo
 Please see [this](https://hackmd.io/@_BK2lUeVSI6hlsvNLM-iLQ/SJgLZGd9u).
 
-### Don't use the results of the eval, because they are generated with deterministic, which is hard to be affected by noisy critics. Use the results of the rollout/ep_rew_mean, which is sampled according to the distribution.
+### Don't use the results of the eval, because they are generated with deterministic == True, which is hard to be affected by noisy critics. Use the results of the rollout/ep_rew_mean, which is sampled according to the distribution.
