@@ -105,7 +105,7 @@ class HPO(OnPolicyAlgorithm):
         advantage_flipped_rate: float = 0.0,
         actor_delay: int = 20 ,
         pf_coef: float = 20.0,
-        policy_update_scheme: int = 0,
+        policy_update_scheme: int = 1,
         n_envs: int = 1,
         independent_value_net: bool= False,
         lunarlander_heuristic: bool= False,
@@ -699,11 +699,12 @@ class HPO(OnPolicyAlgorithm):
                 make the influence of the incorrect advantage will not be soothed by other actions in the same state'''
                 '''episode_counter % self.actor_delay to make the policy update slower than the critic update'''
                 '''self.policy_update_scheme == 1 block actor delay must be larger than action_space.n, 
-                or some action will not be updated forever'''
+                or some actions will not be updated forever'''
                 if episode_counter % self.actor_delay == 0 and self.policy_update_scheme == 0:
                     # if if episode_counter % self.actor_delay < self.action_space.n :
                     # a  =  int((episode_counter ) % self.actor_delay )
                     # for a in range(self.action_space.n) :
+                    '''update the action a per (self.actor_delay*self.action_space.n) episodes'''
                     a =  int((episode_counter/self.actor_delay) %  self.action_space.n )
                     # print("episode: ",episode_counter,"a: ",a)
                     if self.classifier == "AM":
@@ -728,10 +729,11 @@ class HPO(OnPolicyAlgorithm):
                     #abs_adv = np.abs(advantages.cpu())
                     # advantages = advantages.detach()
                     advantages = gpu_action_advantages[a].detach()
-                    ''' flipped advantages noise'''
+                    ''' flipped advantages'''
                     advantages = advantages*flipped_adv_list[a]
-                    ''' flipped advantages noise'''
+                    ''' flipped advantages'''
                     y = th.sign(advantages)
+                    '''weight of advantage, WCE has the same gradients with PPO-clip'''
                     if self.aece == "WAE" or self.aece == "WCE":
                         # y = advantages
                         abs_adv = th.abs(advantages)
@@ -745,13 +747,14 @@ class HPO(OnPolicyAlgorithm):
                     #policy_loss_data = []
                     t_loss_start = time.time()
                     
-                    
+                    '''old code for small loss trick'''
                     # for key ,value in od:
                     #     # print("k,v",key,value)
                     #     if deltaYcounter>= deltaYnum:
                     #         break
                     #     deltaYs[key] = 1
                     #     deltaYcounter+=1
+                    '''assign epsilon to marginalRankingloss'''
                     for i in range(self.batch_size):
                         if self.classifier == "AM":
                             epsilon[i] = self.alpha * min(1, prob_ratio[i])
@@ -773,9 +776,11 @@ class HPO(OnPolicyAlgorithm):
                         # policy_losses2.append((1-th.exp(val_log_prob[i]).item())*abs_adv[i] * policy_loss_fn( x1[i].unsqueeze(0) , x2[i].unsqueeze(0) , (y[i]  ) .unsqueeze(0) ))
                         # policy_losses2.append((1-th.exp(val_log_prob[i]).item())*abs_adv[i] * policy_loss_fn( x1[i].unsqueeze(0) , x2[i].unsqueeze(0) , (y[i]  ) .unsqueeze(0) ))
                         # policy_loss += abs_adv[i] * policy_loss_fn( x1[i].unsqueeze(0) , x2[i].unsqueeze(0) , (y[i]*(1-2*deltaYs[i] )) .unsqueeze(0) )
+                        '''record sa pairs which are not igrored in the first epoch'''
                         if epoch == 0 and th.exp(full_sa_log_prob[a][i]).item() <= self.spt_clipped_prob:
                             # print("th.exp(full_sa_log_prob[a][i]).item()",th.exp(full_sa_log_prob[a][i]).item())
                             active_example_counter+=1
+                        '''SPT'''
                         if th.exp(full_sa_log_prob[a][i]).item() <= self.spt_clipped_prob:
                             policy_losses2.append(abs_adv[i] * policy_loss_fn( x1[i].unsqueeze(0) , x2[i].unsqueeze(0) , (y[i]  ) .unsqueeze(0) ))
                             not_0_loss_counter+=1
@@ -788,8 +793,10 @@ class HPO(OnPolicyAlgorithm):
                     loss_time.append(t_loss_end - t_loss_start)
                     # policy_loss /= self.batch_size
                     # policy_loss = th.stack(policy_losses2).sum() /self.batch_size
+                    '''avoid dividing by 0'''
                     if not_0_loss_counter ==0 :
                         not_0_loss_counter = 1
+                    '''mean of policy loss of active sa pairs(examples)'''
                     policy_loss = th.stack(policy_losses2).sum() / not_0_loss_counter
                 
                 if self.policy_update_scheme == 1 and (episode_counter % self.actor_delay) < self.action_space.n:
@@ -840,7 +847,7 @@ class HPO(OnPolicyAlgorithm):
                     #policy_loss_data = []
                     t_loss_start = time.time()
                     
-                    
+                    '''old code for small loss trick'''
                     # for key ,value in od:
                     #     # print("k,v",key,value)
                     #     if deltaYcounter>= deltaYnum:
@@ -866,7 +873,7 @@ class HPO(OnPolicyAlgorithm):
                         # policy_losses2.append((1-th.exp(val_log_prob[i]).item())*abs_adv[i] * policy_loss_fn( x1[i].unsqueeze(0) , x2[i].unsqueeze(0) , (y[i]  ) .unsqueeze(0) ))
                         # policy_losses2.append((1-th.exp(val_log_prob[i]).item())*abs_adv[i] * policy_loss_fn( x1[i].unsqueeze(0) , x2[i].unsqueeze(0) , (y[i]  ) .unsqueeze(0) ))
                         # policy_loss += abs_adv[i] * policy_loss_fn( x1[i].unsqueeze(0) , x2[i].unsqueeze(0) , (y[i]*(1-2*deltaYs[i] )) .unsqueeze(0) )
-                        '''record how many s,a pairs are ignored by SPT'''
+                        '''record how many s,a pairs are not ignored by SPT'''
                         if epoch == 0 and th.exp(full_sa_log_prob[a][i]).item() <= self.spt_clipped_prob:
                             active_example_counter+=1
                             # print("th.exp(full_sa_log_prob[a][i]).item()",th.exp(full_sa_log_prob[a][i]).item())
@@ -889,11 +896,13 @@ class HPO(OnPolicyAlgorithm):
                     loss_time.append(t_loss_end - t_loss_start)
                     # policy_loss /= self.batch_size
                     # policy_loss = th.stack(policy_losses2).sum() /self.batch_size
+                    '''avoid dividing by 0'''
                     if not_0_loss_counter ==0 :
                         not_0_loss_counter = 1
                     policy_loss = th.stack(policy_losses2).sum() / not_0_loss_counter
                 
                 if self.policy_update_scheme == 2:
+                    '''self.actor_delay must be larger than self.action_space.n'''
                     a  =  int((episode_counter ) % self.actor_delay )
                     # for a in range(self.action_space.n) :
                     # a =  int((episode_counter/self.actor_delay) %  self.action_space.n )
